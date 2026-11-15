@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#111318">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>歌星看板</title>
+<style>
+:root{
+  --bg:#111318; --card:#1b1e26; --card2:#232733; --line:#2e3340;
+  --text:#eceef3; --sub:#9aa1b2; --accent:#ff5c8a; --accent2:#7c9cff; --ok:#3ecf8e;
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html,body{background:var(--bg);color:var(--text);font-family:-apple-system,"PingFang TC","Noto Sans TC","Microsoft JhengHei",sans-serif;font-size:15px}
+body{padding-bottom:calc(24px + env(safe-area-inset-bottom))}
+header{position:sticky;top:0;z-index:10;background:rgba(17,19,24,.92);backdrop-filter:blur(10px);padding:calc(10px + env(safe-area-inset-top)) 14px 0}
+.top{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
+.top h1{font-size:19px;font-weight:700;letter-spacing:.5px}
+.top h1 span{color:var(--accent)}
+.btn{background:var(--card2);border:1px solid var(--line);color:var(--text);border-radius:20px;padding:6px 12px;font-size:13px}
+.btn:active{opacity:.6}
+.chips{display:flex;gap:8px;overflow-x:auto;padding-bottom:10px;scrollbar-width:none}
+.chips::-webkit-scrollbar{display:none}
+.chip{flex:0 0 auto;padding:7px 14px;border-radius:20px;background:var(--card);border:1px solid var(--line);color:var(--sub);font-size:14px;white-space:nowrap}
+.chip.on{background:var(--accent);border-color:var(--accent);color:#fff;font-weight:600}
+.tabs{display:grid;grid-template-columns:repeat(4,1fr);border-bottom:1px solid var(--line)}
+.tab{text-align:center;padding:10px 0;color:var(--sub);font-size:14px;border-bottom:2px solid transparent}
+.tab.on{color:var(--text);border-color:var(--accent);font-weight:600}
+main{padding:14px}
+.hero{display:flex;gap:12px;align-items:center;background:var(--card);border-radius:14px;padding:12px;margin-bottom:12px}
+.hero img{width:64px;height:64px;border-radius:50%;object-fit:cover;background:var(--card2);flex:0 0 auto}
+.hero .ph{width:64px;height:64px;border-radius:50%;background:linear-gradient(135deg,var(--accent),var(--accent2));display:flex;align-items:center;justify-content:center;font-weight:700;font-size:20px;flex:0 0 auto}
+.hero h2{font-size:18px}
+.hero p{color:var(--sub);font-size:13px;margin-top:2px}
+.card{background:var(--card);border-radius:14px;padding:14px;margin-bottom:12px}
+.card h3{font-size:14px;color:var(--sub);margin-bottom:8px;font-weight:600}
+table.kv{width:100%;border-collapse:collapse}
+table.kv td{padding:7px 0;border-bottom:1px solid var(--line);vertical-align:top;font-size:14px}
+table.kv tr:last-child td{border-bottom:none}
+table.kv td:first-child{color:var(--sub);width:72px;white-space:nowrap}
+.extract{line-height:1.7;font-size:14px}
+a{color:var(--accent2);text-decoration:none}
+.list .item{display:block;padding:11px 0;border-bottom:1px solid var(--line);color:var(--text)}
+.list .item:last-child{border-bottom:none}
+.item .t{font-size:14.5px;line-height:1.5}
+.item .m{font-size:12px;color:var(--sub);margin-top:4px;display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.tag{font-size:11px;padding:1px 7px;border-radius:10px;background:var(--card2);color:var(--sub)}
+.tag.tw{background:rgba(62,207,142,.15);color:var(--ok)}
+.tag.new{background:rgba(255,92,138,.15);color:var(--accent)}
+.albums{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}
+.al{background:var(--card);border-radius:12px;overflow:hidden;color:var(--text)}
+.al img{width:100%;aspect-ratio:1;object-fit:cover;display:block;background:var(--card2)}
+.al .i{padding:8px}
+.al .n{font-size:13px;line-height:1.35;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.al .y{font-size:12px;color:var(--sub);margin-top:3px}
+.bar{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;font-size:13px;color:var(--sub)}
+.toggle{display:flex;gap:6px}
+.toggle .btn.on{background:var(--accent2);border-color:var(--accent2);color:#fff}
+.msg{color:var(--sub);text-align:center;padding:30px 0;font-size:14px}
+.spin{width:26px;height:26px;border:3px solid var(--line);border-top-color:var(--accent);border-radius:50%;animation:s 0.8s linear infinite;margin:30px auto}
+@keyframes s{to{transform:rotate(360deg)}}
+.foot{font-size:11px;color:var(--sub);text-align:center;margin-top:8px}
+</style>
+</head>
+<body>
+<header>
+  <div class="top">
+    <h1>🎤 歌星<span>看板</span></h1>
+    <button class="btn" id="refresh">↻ 更新</button>
+  </div>
+  <div class="chips" id="chips"></div>
+  <div class="tabs" id="tabs">
+    <div class="tab on" data-t="profile">個人資料</div>
+    <div class="tab" data-t="news">最新消息</div>
+    <div class="tab" data-t="concert">演唱會</div>
+    <div class="tab" data-t="album">專輯</div>
+  </div>
+</header>
+<main>
+  <div class="hero" id="hero"></div>
+  <div id="content"></div>
+  <div class="foot" id="foot"></div>
+</main>
+
+<script>
+/* ========== 歌手設定 ========== */
+const ARTISTS = [
+  { id:'bts', name:'BTS', sub:'防彈少年團', wiki:['zh:防彈少年團'], itunes:'BTS', match:/^BTS$/i,
+    news:['BTS 防彈少年團'], cq:['BTS 演唱會','BTS 世界巡演'],
+    info:{國家:'韓國',類型:'男子團體',出道:'2013',經紀:'BIGHIT MUSIC',成員:'RM、Jin、SUGA、j-hope、Jimin、V、Jung Kook'} },
+  { id:'bigbang', name:'BIGBANG', sub:'', wiki:['zh:BIGBANG'], itunes:'BIGBANG', match:/^BIGBANG$/i,
+    news:['BIGBANG'], cq:['BIGBANG 演唱會'],
+    info:{國家:'韓國',類型:'男子團體',出道:'2006',成員:'G-DRAGON、太陽、大聲'} },
+  { id:'gd', name:'G-DRAGON', sub:'權志龍', wiki:['zh:權志龍'], itunes:'G-DRAGON', match:/G-?DRAGON/i,
+    news:['G-DRAGON 權志龍'], cq:['G-DRAGON 演唱會','權志龍 演唱會'],
+    info:{國家:'韓國',類型:'男歌手 / 製作人',出道:'2006（BIGBANG）'} },
+  { id:'blackpink', name:'BLACKPINK', sub:'', wiki:['zh:BLACKPINK'], itunes:'BLACKPINK', match:/^BLACKPINK$/i,
+    news:['BLACKPINK'], cq:['BLACKPINK 演唱會','BLACKPINK 巡演'],
+    info:{國家:'韓國',類型:'女子團體',出道:'2016',成員:'Jisoo、Jennie、Rosé、Lisa'} },
+  { id:'sunset', name:'落日飛車', sub:'Sunset Rollercoaster', wiki:['zh:落日飛車'], itunes:'Sunset Rollercoaster', match:/Sunset Rollercoaster|落日飛車/i,
+    news:['落日飛車'], cq:['落日飛車 演唱會','落日飛車 巡演'],
+    info:{國家:'台灣',類型:'樂團',出道:'2009'} },
+  { id:'yangnw', name:'楊乃文', sub:'Naiwen Yang', wiki:['zh:楊乃文'], itunes:'楊乃文', match:/楊乃文|Naiwen/i,
+    news:['楊乃文'], cq:['楊乃文 演唱會'],
+    info:{國家:'台灣',類型:'女歌手',出道:'1997'} },
+  { id:'wubai', name:'伍佰', sub:'Wu Bai & China Blue', wiki:['zh:伍佰'], itunes:'伍佰', match:/伍佰|Wu Bai/i,
+    news:['伍佰'], cq:['伍佰 演唱會'],
+    info:{國家:'台灣',類型:'男歌手 / 樂團',出道:'1992'} },
+  { id:'accusefive', name:'告五人', sub:'Accusefive', wiki:['zh:告五人'], itunes:'告五人', match:/告五人|Accusefive/i,
+    news:['告五人'], cq:['告五人 演唱會','告五人 巡演'],
+    info:{國家:'台灣',類型:'樂團',出道:'2017'} },
+  { id:'dct', name:'DREAMS COME TRUE', sub:'美夢成真', wiki:['zh:DREAMS COME TRUE','ja:DREAMS COME TRUE'], itunes:'DREAMS COME TRUE', match:/DREAMS COME TRUE/i,
+    news:['DREAMS COME TRUE'], cq:['DREAMS COME TRUE 演唱會'], ja:['DREAMS COME TRUE ライブ OR ツアー'],
+    info:{國家:'日本',類型:'樂團',出道:'1989',成員:'吉田美和、中村正人'} },
+  { id:'yoasobi', name:'YOASOBI', sub:'', wiki:['zh:YOASOBI'], itunes:'YOASOBI', match:/^YOASOBI$/i,
+    news:['YOASOBI'], cq:['YOASOBI 演唱會','YOASOBI 巡演'], ja:['YOASOBI ライブ OR ツアー'],
+    info:{國家:'日本',類型:'雙人組合',出道:'2019',成員:'Ayase、幾田莉拉（ikura）'} },
+  { id:'ao', name:'ao', sub:'日本新生代創作女歌手', wiki:['zh:Ao (歌手)','ja:Ao (歌手)','ja:ao (歌手)'], itunes:'ao', match:/^ao$/i, itunesCountry:'JP',
+    news:['ao 歌手 玻璃之心','ao 櫻井雪乃'], cq:['ao 歌手 演唱會'], ja:['ao 歌手 ライブ','ao グラスハート ユキノ'],
+    info:{國家:'日本',類型:'創作女歌手',代表:'Netflix《玻璃之心》櫻井雪乃幕後代唱（〈君とうたう歌〉、〈Your Voice〉）'},
+    bio:'日本新生代靈魂女聲，以極具辨識度的嗓音受到矚目。曾擔任 Netflix 日劇《玻璃之心》（Glass Heart）中角色「櫻井雪乃」的幕後代唱，演唱〈君とうたう歌〉、〈Your Voice〉等曲。' },
+];
+
+/* ========== 工具 ========== */
+const PROXY = '/.netlify/functions/star-proxy?url=';
+const TTL = { profile: 24*3600e3, album: 24*3600e3, news: 30*60e3, concert: 30*60e3 };
+const TW_WORDS = /台北|臺北|台中|臺中|高雄|台南|臺南|桃園|新竹|台灣|臺灣|大巨蛋|小巨蛋|林口|北流|高流|國家體育場|世運/;
+let state = { a: ARTISTS[0].id, t: 'profile', withSingles: false, twOnly: false };
+let force = false;
+
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
+function cacheGet(k, ttl){
+  if (force) return null;
+  try { const v = JSON.parse(localStorage.getItem('sb:'+k)); if (v && Date.now()-v.t < ttl) return v; } catch(e){}
+  return null;
+}
+function cacheSet(k, data){ try { localStorage.setItem('sb:'+k, JSON.stringify({ t: Date.now(), data })); } catch(e){} }
+
+async function get(url, type='json'){
+  const r = await fetch(PROXY + encodeURIComponent(url));
+  if (!r.ok) throw new Error('HTTP ' + r.status);
+  return type === 'json' ? r.json() : r.text();
+}
+
+function ago(d){
+  const s = (Date.now() - d) / 1000;
+  if (s < 3600) return Math.max(1, Math.round(s/60)) + ' 分鐘前';
+  if (s < 86400) return Math.round(s/3600) + ' 小時前';
+  if (s < 86400*30) return Math.round(s/86400) + ' 天前';
+  return new Date(d).toLocaleDateString('zh-TW');
+}
+
+/* ========== 資料抓取 ========== */
+async function fetchProfile(a){
+  for (const w of a.wiki){
+    const [lang, title] = w.split(':');
+    try {
+      const j = await get(`https://${lang}.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(title)}`);
+      if (j && j.extract && j.type !== 'disambiguation') {
+        return { extract: j.extract, desc: j.description || '', img: j.thumbnail?.source || '',
+                 link: lang === 'zh' ? `https://zh.wikipedia.org/zh-tw/${encodeURIComponent(title)}` : j.content_urls?.mobile?.page, lang };
+      }
+    } catch(e){}
+  }
+  return { extract: '', desc: '', img: '', link: '', lang: '' };
+}
+
+function gnewsUrl(q, lang){
+  return lang === 'ja'
+    ? `https://news.google.com/rss/search?q=${encodeURIComponent(q)}&hl=ja&gl=JP&ceid=JP:ja`
+    : `https://news.google.com/rss/search?q=${encodeURIComponent(q)}&hl=zh-TW&gl=TW&ceid=TW:zh-Hant`;
+}
+function parseRss(xml){
+  const doc = new DOMParser().parseFromString(xml, 'text/xml');
+  return [...doc.querySelectorAll('item')].map(it => {
+    const src = it.querySelector('source')?.textContent || '';
+    let title = it.querySelector('title')?.textContent || '';
+    if (src && title.endsWith(' - ' + src)) title = title.slice(0, -(src.length + 3));
+    return { title, link: it.querySelector('link')?.textContent || '', date: Date.parse(it.querySelector('pubDate')?.textContent || '') || 0, src };
+  });
+}
+async function fetchNews(queries){
+  const res = await Promise.allSettled(queries.map(([q, lang]) => get(gnewsUrl(q, lang), 'text').then(parseRss)));
+  const seen = new Set(), out = [];
+  res.forEach(r => r.status === 'fulfilled' && r.value.forEach(n => {
+    const k = n.title.replace(/\s/g,'').slice(0, 40);
+    if (!seen.has(k)) { seen.add(k); out.push(n); }
+  }));
+  return out.sort((x, y) => y.date - x.date).slice(0, 40);
+}
+
+async function fetchAlbums(a){
+  const tryCountry = async c => {
+    const j = await get(`https://itunes.apple.com/search?term=${encodeURIComponent(a.itunes)}&entity=album&attribute=artistTerm&country=${c}&limit=200`);
+    return (j.results || []).filter(r => a.match.test((r.artistName || '').trim()));
+  };
+  let list = await tryCountry(a.itunesCountry || 'TW');
+  if (!list.length) list = await tryCountry(a.itunesCountry === 'JP' ? 'TW' : 'JP');
+  const map = new Map();
+  list.forEach(r => {
+    let name = r.collectionName || '';
+    let kind = '專輯';
+    if (/ - Single$/i.test(name)) { kind = '單曲'; name = name.replace(/ - Single$/i, ''); }
+    else if (/ - EP$/i.test(name)) { kind = 'EP'; name = name.replace(/ - EP$/i, ''); }
+    else if ((r.trackCount || 0) <= 3) kind = '單曲';
+    const key = name.toLowerCase().replace(/\s|\(.*?\)|（.*?）/g, '');
+    const item = { name, kind, date: r.releaseDate, year: (r.releaseDate || '').slice(0, 4),
+      img: (r.artworkUrl100 || '').replace('100x100bb', '300x300bb'), url: r.collectionViewUrl, n: r.trackCount };
+    const old = map.get(key);
+    if (!old || (old.date || '') > (item.date || '')) map.set(key, item);
+  });
+  return [...map.values()].sort((x, y) => (y.date || '').localeCompare(x.date || ''));
+}
+
+async function load(kind, a){
+  const key = `${a.id}:${kind}`;
+  const c = cacheGet(key, TTL[kind]);
+  if (c) return c;
+  let data;
+  if (kind === 'profile') data = await fetchProfile(a);
+  else if (kind === 'album') data = await fetchAlbums(a);
+  else if (kind === 'news') data = await fetchNews([...a.news.map(q => [q + ' when:30d', 'zh']), ...(a.id === 'ao' ? a.ja.map(q => [q + ' when:30d', 'ja']) : [])]);
+  else if (kind === 'concert') data = await fetchNews([
+      ...a.cq.map(q => [q + ' when:180d', 'zh']),
+      ...(a.ja || []).map(q => [q + ' when:180d', 'ja'])]);
+  cacheSet(key, data);
+  return { t: Date.now(), data };
+}
+
+/* ========== 畫面 ========== */
+function renderChips(){
+  $('#chips').innerHTML = ARTISTS.map(a => `<div class="chip ${a.id === state.a ? 'on' : ''}" data-a="${a.id}">${esc(a.name)}</div>`).join('');
+}
+function renderHero(a, p){
+  const img = p && p.img ? `<img src="${esc(p.img)}" alt="" onerror="this.outerHTML='<div class=ph>${esc(a.name[0])}</div>'">` : `<div class="ph">${esc(a.name[0])}</div>`;
+  $('#hero').innerHTML = `${img}<div><h2>${esc(a.name)}</h2><p>${esc([a.sub, a.info.國家, a.info.類型].filter(Boolean).join(' · '))}</p></div>`;
+}
+
+const views = {
+  profile(a, p){
+    const rows = Object.entries(a.info).map(([k, v]) => `<tr><td>${esc(k)}</td><td>${esc(v)}</td></tr>`).join('');
+    const text = p.extract || a.bio || '暫無維基百科資料';
+    const link = p.link ? `<div style="margin-top:10px;font-size:13px"><a href="${esc(p.link)}" target="_blank" rel="noopener">維基百科全文 →</a>${p.lang === 'ja' ? '（日文）' : ''}</div>` : '';
+    return `<div class="card"><h3>基本資料</h3><table class="kv">${rows}</table></div>
+            <div class="card"><h3>簡介</h3><div class="extract">${esc(text)}</div>${link}</div>`;
+  },
+  news(a, list){
+    if (!list.length) return `<div class="msg">近 30 天沒有新聞</div>`;
+    return `<div class="card list">${list.map(n => newsItem(n)).join('')}</div>`;
+  },
+  concert(a, list){
+    let l = list;
+    if (state.twOnly) l = l.filter(n => TW_WORDS.test(n.title));
+    const bar = `<div class="bar"><span>近 180 天演唱會相關新聞 ${l.length} 則</span>
+      <div class="toggle"><button class="btn ${state.twOnly ? 'on' : ''}" id="twOnly">只看台灣</button></div></div>`;
+    if (!l.length) return bar + `<div class="msg">沒有找到相關消息</div>`;
+    return bar + `<div class="card list">${l.map(n => newsItem(n, true)).join('')}</div>`;
+  },
+  album(a, list){
+    const l = state.withSingles ? list : list.filter(x => x.kind !== '單曲');
+    const bar = `<div class="bar"><span>共 ${l.length} 張</span>
+      <div class="toggle"><button class="btn ${state.withSingles ? 'on' : ''}" id="singles">含單曲</button></div></div>`;
+    if (!l.length) return bar + `<div class="msg">查無專輯資料</div>`;
+    return bar + `<div class="albums">${l.map(x => `
+      <a class="al" href="${esc(x.url)}" target="_blank" rel="noopener">
+        <img src="${esc(x.img)}" loading="lazy" alt="">
+        <div class="i"><div class="n">${esc(x.name)}</div>
+        <div class="y">${esc(x.year)} · ${esc(x.kind)}${x.n ? ' · ' + x.n + ' 首' : ''}</div></div>
+      </a>`).join('')}</div>`;
+  },
+};
+function newsItem(n, concert){
+  const isNew = Date.now() - n.date < 86400e3 * 2;
+  const tw = concert && TW_WORDS.test(n.title);
+  return `<a class="item" href="${esc(n.link)}" target="_blank" rel="noopener">
+    <div class="t">${esc(n.title)}</div>
+    <div class="m">${isNew ? '<span class="tag new">NEW</span>' : ''}${tw ? '<span class="tag tw">台灣場</span>' : ''}
+      <span>${esc(n.src)}</span><span>${n.date ? ago(n.date) : ''}</span></div></a>`;
+}
+
+let token = 0;
+async function render(){
+  const my = ++token;
+  const a = ARTISTS.find(x => x.id === state.a);
+  document.querySelectorAll('.tab').forEach(t => t.classList.toggle('on', t.dataset.t === state.t));
+  $('#content').innerHTML = '<div class="spin"></div>';
+  $('#foot').textContent = '';
+  // hero 先用快取的 profile 圖
+  const pc = cacheGet(`${a.id}:profile`, TTL.profile);
+  renderHero(a, pc && pc.data);
+  try {
+    const r = await load(state.t, a);
+    if (my !== token) return;
+    $('#content').innerHTML = views[state.t](a, r.data);
+    $('#foot').textContent = '資料時間：' + new Date(r.t).toLocaleString('zh-TW', { hour12: false });
+    if (state.t === 'profile') renderHero(a, r.data);
+    else if (!pc) load('profile', a).then(p => my === token && renderHero(a, p.data)).catch(() => {});
+  } catch(e){
+    if (my !== token) return;
+    $('#content').innerHTML = `<div class="msg">載入失敗（${esc(e.message)}）<br>請確認已部署 Netlify Functions</div>`;
+  } finally { force = false; }
+}
+
+/* ========== 事件 ========== */
+$('#chips').addEventListener('click', e => {
+  const c = e.target.closest('.chip'); if (!c) return;
+  state.a = c.dataset.a; save(); renderChips(); render();
+  c.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+});
+$('#tabs').addEventListener('click', e => {
+  const t = e.target.closest('.tab'); if (!t) return;
+  state.t = t.dataset.t; save(); render();
+});
+$('#content').addEventListener('click', e => {
+  if (e.target.id === 'singles') { state.withSingles = !state.withSingles; save(); render(); }
+  if (e.target.id === 'twOnly') { state.twOnly = !state.twOnly; save(); render(); }
+});
+$('#refresh').addEventListener('click', () => { force = true; render(); });
+
+function save(){ try { localStorage.setItem('sb:state', JSON.stringify(state)); } catch(e){} }
+try { Object.assign(state, JSON.parse(localStorage.getItem('sb:state')) || {}); } catch(e){}
+if (!ARTISTS.some(a => a.id === state.a)) state.a = ARTISTS[0].id;
+
+renderChips(); render();
+setTimeout(() => document.querySelector('.chip.on')?.scrollIntoView({ inline: 'center', block: 'nearest' }), 50);
+</script>
+</body>
+</html>
