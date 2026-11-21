@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#f7f2e8">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>shixianba 查歌</title>
+<style>
+:root{
+  --bg:#f7f2e8; --card:#fffdf8; --card2:#efe8da; --line:#e4dccd;
+  --text:#1f1f1f; --sub:#6e675c; --accent:#f8c3d1; --accent2:#bcdcf5;
+  --pinkText:#c2456b; --blueText:#2f6fa8;
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html,body{background:var(--bg);color:var(--text);font-family:-apple-system,"PingFang TC","Noto Sans TC","Microsoft JhengHei",sans-serif;font-size:15px}
+body{padding-bottom:calc(24px + env(safe-area-inset-bottom))}
+header{position:sticky;top:0;z-index:10;background:rgba(247,242,232,.96);backdrop-filter:blur(10px);padding:calc(10px + env(safe-area-inset-top)) 14px 10px}
+.top{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
+.top h1{font-size:19px;font-weight:700;letter-spacing:.5px}
+.top h1 span{color:var(--pinkText)}
+a{color:var(--blueText);text-decoration:none}
+.btn{background:var(--accent2);border:1px solid var(--accent2);color:var(--text);border-radius:20px;padding:6px 12px;font-size:13px;display:inline-block}
+.btn:active{opacity:.6}
+form{display:flex;gap:8px}
+form input{flex:1;min-width:0;border:1px solid var(--line);background:var(--card);border-radius:22px;padding:10px 16px;font-size:16px;color:var(--text);outline:none}
+form input:focus{border-color:var(--pinkText)}
+form button{background:var(--accent);border:none;border-radius:22px;padding:0 18px;font-size:15px;font-weight:700;color:var(--text)}
+.chips{display:flex;gap:8px;overflow-x:auto;margin-top:10px;scrollbar-width:none}
+.chips::-webkit-scrollbar{display:none}
+.chip{flex:0 0 auto;padding:6px 12px;border-radius:18px;background:var(--card);border:1px solid var(--line);color:var(--sub);font-size:13px;white-space:nowrap}
+.chip.h{background:var(--accent2);border-color:var(--accent2);color:var(--text)}
+main{padding:12px 14px}
+.s{display:flex;gap:12px;align-items:center;padding:9px;border-radius:12px;margin-bottom:6px;background:var(--card);box-shadow:0 1px 3px rgba(0,0,0,.05)}
+.s img{width:58px;height:58px;border-radius:8px;object-fit:cover;background:var(--card2);flex:0 0 auto}
+.s .i{min-width:0;flex:1}
+.s .t{font-size:15px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.s .m{font-size:12.5px;color:var(--sub);margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.back{margin-bottom:10px}
+.hero{background:var(--card);border-radius:14px;padding:14px;display:flex;gap:14px;align-items:center;margin-bottom:12px;box-shadow:0 1px 3px rgba(0,0,0,.06)}
+.hero img{width:110px;height:110px;border-radius:10px;object-fit:cover;background:var(--card2);flex:0 0 auto}
+.hero h2{font-size:19px;line-height:1.3}
+.hero p{color:var(--sub);font-size:14px;margin-top:4px}
+.hero audio{width:100%;margin-top:8px;height:34px}
+.card{background:var(--card);border-radius:14px;padding:14px;margin-bottom:12px;box-shadow:0 1px 3px rgba(0,0,0,.06)}
+.card h3{font-size:14px;color:var(--sub);margin-bottom:8px;font-weight:600}
+table.kv{width:100%;border-collapse:collapse}
+table.kv td{padding:7px 0;border-bottom:1px solid var(--line);vertical-align:top;font-size:14px}
+table.kv tr:last-child td{border-bottom:none}
+table.kv td:first-child{color:var(--sub);width:72px;white-space:nowrap}
+.extract{line-height:1.75;font-size:14px}
+.src{font-size:12.5px;margin-top:10px;color:var(--sub)}
+.links{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.links a{display:block;text-align:center;padding:10px 6px;border-radius:12px;font-size:14px;color:var(--text);background:var(--accent2)}
+.links a.p{background:var(--accent)}
+.note{font-size:12px;color:var(--sub);margin-top:10px;line-height:1.6}
+.msg{color:var(--sub);text-align:center;padding:30px 0;font-size:14px;line-height:1.7}
+.spin{width:26px;height:26px;border:3px solid var(--line);border-top-color:var(--pinkText);border-radius:50%;animation:s .8s linear infinite;margin:30px auto}
+.spin.sm{width:18px;height:18px;border-width:2px;margin:6px 0}
+@keyframes s{to{transform:rotate(360deg)}}
+</style>
+</head>
+<body>
+<header>
+  <div class="top">
+    <h1>🔍 shixian<span>ba</span> 查歌</h1>
+    <a class="btn" href="./">← 看板</a>
+  </div>
+  <form id="f"><input id="q" type="search" placeholder="輸入歌名或歌手" autocomplete="off" enterkeyhint="search"><button>搜尋</button></form>
+  <div class="chips" id="chips"></div>
+</header>
+<main id="main"><div class="msg">輸入歌名開始查詢 🎵</div></main>
+
+<script>
+const ARTISTS = ['BTS','BIGBANG','G-DRAGON','落日飛車','楊乃文','伍佰','告五人','蛋堡','DREAMS COME TRUE','YOASOBI'];
+const PROXY = '/.netlify/functions/star-proxy?url=';
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+let results = [], lastQ = '';
+
+async function get(url){
+  const key = 'sb:c:' + url;
+  try { const c = JSON.parse(localStorage.getItem(key)); if (c && Date.now() - c.t < 12 * 3600e3) return c.d; } catch(e){}
+  const r = await fetch(PROXY + encodeURIComponent(url));
+  if (!r.ok) throw new Error('HTTP ' + r.status);
+  const d = await r.json();
+  try { localStorage.setItem(key, JSON.stringify({ t: Date.now(), d })); } catch(e){}
+  return d;
+}
+
+/* ---- 搜尋紀錄 ---- */
+function hist(){ try { return JSON.parse(localStorage.getItem('sb:songhist')) || []; } catch(e){ return []; } }
+function addHist(q){ try { localStorage.setItem('sb:songhist', JSON.stringify([q, ...hist().filter(x => x !== q)].slice(0, 10))); } catch(e){} }
+function renderChips(){
+  const h = hist();
+  $('#chips').innerHTML = h.map(x => `<div class="chip h" data-q="${esc(x)}">🕘 ${esc(x)}</div>`).join('')
+    + ARTISTS.filter(a => !h.includes(a)).map(a => `<div class="chip" data-q="${esc(a)}">${esc(a)}</div>`).join('');
+}
+
+/* ---- 搜尋歌曲（iTunes） ---- */
+async function search(q){
+  q = q.trim(); if (!q) return;
+  lastQ = q; $('#q').value = q; $('#q').blur();
+  addHist(q); renderChips();
+  $('#main').innerHTML = '<div class="spin"></div>';
+  history.replaceState(null, '', '?q=' + encodeURIComponent(q));
+  try {
+    const j = await get(`https://itunes.apple.com/search?term=${encodeURIComponent(q)}&entity=song&country=TW&limit=50`);
+    const seen = new Set();
+    results = (j.results || []).filter(r => {
+      const k = (r.trackName + '|' + r.artistName).toLowerCase();
+      if (seen.has(k)) return false; seen.add(k); return true;
+    });
+    renderList();
+  } catch(e){ $('#main').innerHTML = `<div class="msg">搜尋失敗（${esc(e.message)}）</div>`; }
+}
+function renderList(){
+  if (!results.length) { $('#main').innerHTML = '<div class="msg">找不到歌曲</div>'; return; }
+  $('#main').innerHTML = results.map((r, i) => `
+    <div class="s" data-i="${i}">
+      <img src="${esc((r.artworkUrl100 || '').replace('100x100bb', '200x200bb'))}" loading="lazy" alt="">
+      <div class="i"><div class="t">${esc(r.trackName)}</div>
+      <div class="m">${esc(r.artistName)} · ${esc((r.releaseDate || '').slice(0, 4))}</div>
+      <div class="m">${esc(r.collectionName || '')}</div></div>
+    </div>`).join('');
+  window.scrollTo(0, 0);
+}
+
+/* ---- 歌曲說明（維基百科） ---- */
+const norm = s => String(s || '').toLowerCase().replace(/\(.*?\)|（.*?）|\[.*?\]|feat\..*$|[\s'’"!?！？・\-–]/g, '');
+async function wikiFor(title, artist){
+  const t = norm(title);
+  const tries = [
+    ['zh', `${title} ${artist}`], ['zh', title],
+    ['en', `${title} ${artist} song`], ['ja', `${title} ${artist}`],
+  ];
+  for (const [lang, q] of tries) {
+    try {
+      const s = await get(`https://${lang}.wikipedia.org/w/api.php?action=query&list=search&srsearch=${encodeURIComponent(q)}&srlimit=5&format=json`);
+      const hit = (s.query?.search || []).find(x => t && norm(x.title).includes(t));
+      if (!hit) continue;
+      const d = await get(`https://${lang}.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(hit.title)}`);
+      if (d.extract && d.type !== 'disambiguation') {
+        return { lang, title: hit.title, text: d.extract,
+          link: lang === 'zh' ? `https://zh.wikipedia.org/zh-tw/${encodeURIComponent(hit.title)}` : d.content_urls?.mobile?.page };
+      }
+    } catch(e){}
+  }
+  return null;
+}
+
+/* ---- 詳細頁 ---- */
+function fmtTime(ms){ if (!ms) return '—'; const s = Math.round(ms / 1000); return Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0'); }
+async function detail(i){
+  const r = results[i]; if (!r) return;
+  const qq = `${r.trackName} ${r.artistName}`;
+  const enc = encodeURIComponent;
+  const rows = [
+    ['發行日期', (r.releaseDate || '').slice(0, 10)],
+    ['歌手', r.artistName],
+    ['專輯', r.collectionName],
+    ['曲目', r.trackNumber ? `第 ${r.trackNumber} 首（共 ${r.trackCount} 首）` : ''],
+    ['長度', fmtTime(r.trackTimeMillis)],
+    ['類型', r.primaryGenreName],
+  ].filter(x => x[1]);
+  $('#main').innerHTML = `
+    <button class="btn back" id="back">← 回搜尋結果</button>
+    <div class="hero">
+      <img src="${esc((r.artworkUrl100 || '').replace('100x100bb', '400x400bb'))}" alt="">
+      <div style="min-width:0;flex:1"><h2>${esc(r.trackName)}</h2><p>${esc(r.artistName)}</p>
+      ${r.previewUrl ? `<audio controls preload="none" src="${esc(r.previewUrl)}"></audio><div class="note" style="margin-top:2px">30 秒試聽（Apple Music）</div>` : ''}</div>
+    </div>
+    <div class="card"><h3>歌曲資料</h3><table class="kv">${rows.map(([k, v]) => `<tr><td>${esc(k)}</td><td>${esc(v)}</td></tr>`).join('')}</table></div>
+    <div class="card"><h3>歌曲說明</h3><div id="wiki"><div class="spin sm"></div></div></div>
+    <div class="card"><h3>歌詞與中文翻譯</h3>
+      <div class="links">
+        <a class="p" href="https://www.google.com/search?q=${enc(qq + ' 歌詞 中文翻譯')}" target="_blank" rel="noopener">🔎 找中文翻譯</a>
+        <a class="p" href="https://www.musixmatch.com/search?query=${enc(qq)}" target="_blank" rel="noopener">Musixmatch</a>
+        <a href="https://www.kkbox.com/tw/tc/search?q=${enc(qq)}" target="_blank" rel="noopener">KKBOX</a>
+        <a href="https://genius.com/search?q=${enc(qq)}" target="_blank" rel="noopener">Genius</a>
+      </div>
+      <div class="note">歌詞有版權，所以這裡不直接顯示，點上面的按鈕到歌詞網站查看。Musixmatch 很多歌有中文翻譯。</div>
+    </div>
+    <div class="card"><h3>聽完整首</h3>
+      <div class="links">
+        <a class="p" href="https://www.youtube.com/results?search_query=${enc(qq)}" target="_blank" rel="noopener">▶ YouTube</a>
+        <a href="${esc(r.trackViewUrl || '#')}" target="_blank" rel="noopener">Apple Music</a>
+      </div>
+    </div>`;
+  window.scrollTo(0, 0);
+  history.pushState({ d: i }, '', '?q=' + enc(lastQ) + '&s=' + i);
+  const w = await wikiFor(r.trackName, r.artistName);
+  const box = $('#wiki'); if (!box) return;
+  box.innerHTML = w
+    ? `<div class="extract">${esc(w.text)}</div><div class="src">來源：<a href="${esc(w.link)}" target="_blank" rel="noopener">維基百科〈${esc(w.title)}〉${w.lang === 'en' ? '（英文）' : w.lang === 'ja' ? '（日文）' : ''} →</a></div>`
+    : `<div class="extract" style="color:var(--sub)">維基百科沒有這首歌的條目。</div>
+       <div class="src"><a href="https://www.google.com/search?q=${enc(qq + ' 歌曲 創作背景')}" target="_blank" rel="noopener">用 Google 搜尋歌曲背景 →</a></div>`;
+}
+
+/* ---- 事件 ---- */
+$('#f').addEventListener('submit', e => { e.preventDefault(); search($('#q').value); });
+$('#chips').addEventListener('click', e => { const c = e.target.closest('.chip'); if (c) search(c.dataset.q); });
+$('#main').addEventListener('click', e => {
+  if (e.target.id === 'back') { history.back(); return; }
+  const s = e.target.closest('.s'); if (s) detail(+s.dataset.i);
+});
+window.addEventListener('popstate', () => { if (results.length) renderList(); });
+
+renderChips();
+const q0 = new URLSearchParams(location.search).get('q');
+if (q0) search(q0);
+</script>
+</body>
+</html>
