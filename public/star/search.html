@@ -127,20 +127,44 @@ function renderList(){
 }
 
 /* ---- 歌曲說明（維基百科） ---- */
-const norm = s => String(s || '').toLowerCase().replace(/\(.*?\)|（.*?）|\[.*?\]|feat\..*$|[\s'’"!?！？・\-–]/g, '');
-async function wikiFor(title, artist){
-  const t = norm(title);
+const norm = s => String(s || '').toLowerCase().replace(/\(.*?\)|（.*?）|\[.*?\]|feat\..*$|[\s'’"!?！？・\-–.,:]/g, '');
+// 歌手別名：iTunes 台灣區名稱 + 美國區英文名稱，拆開合作歌手
+async function artistAliases(r){
+  let names = [r.artistName];
+  try {
+    const j = await get(`https://itunes.apple.com/lookup?id=${r.trackId}&country=US`);
+    if (j.results?.[0]?.artistName) names.push(j.results[0].artistName);
+  } catch(e){}
+  const out = new Set();
+  names.forEach(n => String(n).split(/\s*(?:&|,|、|＆|feat\.|ft\.|with|x)\s*/i).forEach(x => { x = x.trim(); if (x) out.add(x); }));
+  return [...out];
+}
+function mentions(text, a){
+  const t = String(text).toLowerCase(), al = a.toLowerCase();
+  if (al.length <= 2) return new RegExp('(^|[^a-z0-9])' + al.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '([^a-z0-9]|$)').test(t);
+  return t.includes(al) || t.replace(/\s/g, '').includes(al.replace(/\s/g, ''));
+}
+async function wikiFor(r){
+  const title = r.trackName, t = norm(title);
+  if (!t) return null;
+  const aliases = await artistAliases(r);
+  const a0 = aliases[aliases.length - 1] || r.artistName;   // 英文名優先給英文維基
   const tries = [
-    ['zh', `${title} ${artist}`], ['zh', title],
-    ['en', `${title} ${artist} song`], ['ja', `${title} ${artist}`],
+    ['zh', `${title} ${r.artistName}`], ['zh', `${title} ${a0}`],
+    ['en', `${title} ${a0} song`], ['ja', `${title} ${a0}`],
   ];
+  const tried = new Set();
   for (const [lang, q] of tries) {
     try {
-      const s = await get(`https://${lang}.wikipedia.org/w/api.php?action=query&list=search&srsearch=${encodeURIComponent(q)}&srlimit=5&format=json`);
-      const hit = (s.query?.search || []).find(x => t && norm(x.title).includes(t));
-      if (!hit) continue;
-      const d = await get(`https://${lang}.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(hit.title)}`);
-      if (d.extract && d.type !== 'disambiguation') {
+      const s = await get(`https://${lang}.wikipedia.org/w/api.php?action=query&list=search&srsearch=${encodeURIComponent(q)}&srlimit=8&format=json`);
+      // 頁面標題（去掉括號）必須和歌名完全相同
+      const hits = (s.query?.search || []).filter(x => norm(x.title) === t && !tried.has(lang + x.title));
+      for (const hit of hits) {
+        tried.add(lang + hit.title);
+        const d = await get(`https://${lang}.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(hit.title)}`);
+        if (!d.extract || d.type === 'disambiguation') continue;
+        // 內文或標題括號裡要提到歌手，避免同名歌曲
+        if (!aliases.some(a => mentions(d.extract + ' ' + hit.title, a))) continue;
         return { lang, title: hit.title, text: d.extract,
           link: lang === 'zh' ? `https://zh.wikipedia.org/zh-tw/${encodeURIComponent(hit.title)}` : d.content_urls?.mobile?.page };
       }
@@ -189,7 +213,7 @@ async function detail(i){
     </div>`;
   window.scrollTo(0, 0);
   history.pushState({ d: i }, '', '?q=' + enc(lastQ) + '&s=' + i);
-  const w = await wikiFor(r.trackName, r.artistName);
+  const w = await wikiFor(r);
   const box = $('#wiki'); if (!box) return;
   box.innerHTML = w
     ? `<div class="extract">${esc(w.text)}</div><div class="src">來源：<a href="${esc(w.link)}" target="_blank" rel="noopener">維基百科〈${esc(w.title)}〉${w.lang === 'en' ? '（英文）' : w.lang === 'ja' ? '（日文）' : ''} →</a></div>`
