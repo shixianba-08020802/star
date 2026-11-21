@@ -144,14 +144,13 @@ function mentions(text, a){
   if (al.length <= 2) return new RegExp('(^|[^a-z0-9])' + al.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '([^a-z0-9]|$)').test(t);
   return t.includes(al) || t.replace(/\s/g, '').includes(al.replace(/\s/g, ''));
 }
-async function wikiFor(r){
-  const title = r.trackName, t = norm(title);
+async function wikiFor(r, title, kind, aliases){
+  const t = norm(title);
   if (!t) return null;
-  const aliases = await artistAliases(r);
   const a0 = aliases[aliases.length - 1] || r.artistName;   // 英文名優先給英文維基
   const tries = [
     ['zh', `${title} ${r.artistName}`], ['zh', `${title} ${a0}`],
-    ['en', `${title} ${a0} song`], ['ja', `${title} ${a0}`],
+    ['en', `${title} ${a0} ${kind === 'album' ? 'album' : 'song'}`], ['ja', `${title} ${a0}`],
   ];
   const tried = new Set();
   for (const [lang, q] of tries) {
@@ -165,7 +164,7 @@ async function wikiFor(r){
         if (!d.extract || d.type === 'disambiguation') continue;
         // 內文或標題括號裡要提到歌手，避免同名歌曲
         if (!aliases.some(a => mentions(d.extract + ' ' + hit.title, a))) continue;
-        return { lang, title: hit.title, text: d.extract,
+        return { kind, lang, title: hit.title, text: d.extract,
           link: lang === 'zh' ? `https://zh.wikipedia.org/zh-tw/${encodeURIComponent(hit.title)}` : d.content_urls?.mobile?.page };
       }
     } catch(e){}
@@ -213,11 +212,14 @@ async function detail(i){
     </div>`;
   window.scrollTo(0, 0);
   history.pushState({ d: i }, '', '?q=' + enc(lastQ) + '&s=' + i);
-  const w = await wikiFor(r);
+  const aliases = await artistAliases(r);
+  let w = await wikiFor(r, r.trackName, 'song', aliases);
+  const album = (r.collectionName || '').replace(/\s*-\s*(EP|Single)$/i, '').trim();
+  if (!w && album && norm(album) !== norm(r.trackName)) w = await wikiFor(r, album, 'album', aliases);
   const box = $('#wiki'); if (!box) return;
   box.innerHTML = w
-    ? `<div class="extract">${esc(w.text)}</div><div class="src">來源：<a href="${esc(w.link)}" target="_blank" rel="noopener">維基百科〈${esc(w.title)}〉${w.lang === 'en' ? '（英文）' : w.lang === 'ja' ? '（日文）' : ''} →</a></div>`
-    : `<div class="extract" style="color:var(--sub)">維基百科沒有這首歌的條目。</div>
+    ? `${w.kind === 'album' ? `<div class="note" style="margin:0 0 6px">這首歌沒有單獨條目，以下是所屬專輯《${esc(album)}》的介紹：</div>` : ''}<div class="extract">${esc(w.text)}</div><div class="src">來源：<a href="${esc(w.link)}" target="_blank" rel="noopener">維基百科〈${esc(w.title)}〉${w.lang === 'en' ? '（英文）' : w.lang === 'ja' ? '（日文）' : ''} →</a></div>`
+    : `<div class="extract" style="color:var(--sub)">維基百科沒有這首歌或所屬專輯的條目。</div>
        <div class="src"><a href="https://www.google.com/search?q=${enc(qq + ' 歌曲 創作背景')}" target="_blank" rel="noopener">用 Google 搜尋歌曲背景 →</a></div>`;
 }
 
